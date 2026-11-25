@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BeBop</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#000; --panel:#0a0a0a; --panel2:#141414; --line:#1e1e1e;
+    --text:#f1f1f1; --muted:#7d7d85;
+    --purple:#8b5cf6; --purple2:#b9a1fb; --mustard:#e1ad01;
+    --l0:#121212; --l1:#2a1a55; --l2:#4f2fb0; --l3:#7a4cf0; --l4:#b9a1fb;
+  }
+  *{box-sizing:border-box;margin:0}
+  [hidden]{display:none!important}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;padding:24px}
+  .wrap{max-width:1180px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+  .logo{font-weight:700;letter-spacing:.4px;display:flex;gap:8px;align-items:center;font-size:18px}
+  .logo i{width:10px;height:10px;border-radius:50%;background:var(--mustard);display:inline-block}
+  .me{display:flex;align-items:center;gap:12px}
+  .me small{display:block;color:var(--muted);font-size:11px}
+  .me b{font-size:13px;font-weight:600}
+  .me .who{display:flex;align-items:center;gap:10px}
+  .linkbtn{background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;padding:0}
+  .linkbtn:hover{color:var(--text)}
+  .av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#000;flex:none}
+  .layout{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start}
+  .left{display:grid;gap:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}
+  .card h2{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+
+  .top{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center}
+  .hello h1{font-size:24px;font-weight:600;margin-bottom:4px;overflow-wrap:anywhere}
+  .hello p{color:var(--muted);font-size:14px}
+  .goal{margin-top:20px;max-width:320px}
+  .goal .row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px}
+  .bar{height:4px;background:var(--panel2);border-radius:99px;overflow:hidden}
+  .bar>div{height:100%;background:var(--mustard);border-radius:99px;transition:width .5s}
+
+  .sw{text-align:center;border-left:1px solid var(--line);padding-left:20px}
+  .sw .state{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);height:14px}
+  .sw.run .state{color:var(--mustard)}
+  .sw.break .state{color:var(--purple2)}
+  .sw .time{font-size:56px;font-weight:300;letter-spacing:1px;font-variant-numeric:tabular-nums;margin:8px 0 2px;line-height:1.1}
+  .sw .brk{font-size:12px;color:var(--muted);height:16px;font-variant-numeric:tabular-nums}
+  .sw select{width:auto;min-width:210px;margin-top:16px;text-align:center;text-align-last:center}
+  .sw select:disabled{opacity:.6}
+  .ctrl{display:flex;gap:8px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+  .btn{background:var(--purple);color:#fff;border:1px solid transparent;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn:hover{filter:brightness(1.15)}
+  .btn.line{background:none;border-color:var(--line);color:var(--text)}
+  .btn.line:hover{border-color:var(--purple)}
+  .btn.gold{background:var(--mustard);color:#000}
+  .btn:disabled{opacity:.35;cursor:not-allowed;filter:none}
+
+  .row2{display:grid;grid-template-columns:240px minmax(0,1fr);gap:20px}
+  .streak .big{display:flex;align-items:baseline;gap:10px;margin:2px 0}
+  .streak .num{font-size:64px;font-weight:300;line-height:1;color:var(--mustard)}
+  .streak .lbl{color:var(--muted);font-size:14px}
+  .dots{display:flex;gap:8px;margin-top:22px}
+  .dot{flex:1;text-align:center;font-size:10px;color:var(--muted)}
+  .dot span{display:block;width:100%;max-width:24px;aspect-ratio:1;border-radius:50%;margin:0 auto 6px;background:var(--panel2)}
+  .dot.on span{background:var(--mustard)}
+  .dot.today b{color:var(--text)}
+  .best{margin-top:18px;font-size:12px;color:var(--muted)}
+  .tabs{display:flex;gap:2px}
+  .tabs button{background:none;border:0;color:var(--muted);padding:4px 10px;border-radius:8px;font-size:12px;cursor:pointer;letter-spacing:0;text-transform:none}
+  .tabs button.on{background:var(--panel2);color:var(--text)}
+  .heat-scroll{overflow-x:auto;padding-bottom:6px}
+  .heat{display:grid;gap:4px;grid-auto-flow:column;grid-template-rows:repeat(7,14px);grid-auto-columns:14px;width:max-content}
+  .cell{width:14px;height:14px;border-radius:3px;background:var(--l0)}
+  .cell.hide{visibility:hidden}
+  .l1{background:var(--l1)}.l2{background:var(--l2)}.l3{background:var(--l3)}.l4{background:var(--l4)}
+  .heatwrap{display:flex;gap:8px}
+  .ylab{display:grid;grid-template-rows:repeat(7,14px);gap:4px;font-size:10px;color:var(--muted);align-items:center}
+  .tod{display:grid;grid-template-columns:36px repeat(7,1fr);gap:4px;font-size:10px;color:var(--muted);align-items:center;max-width:420px}
+  .tod .cell{width:auto;height:20px;border-radius:4px}
+  .legend{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--muted);margin-top:14px}
+  .legend .cell{width:12px;height:12px}
+
+  .board{position:sticky;top:24px}
+  .lb{display:grid;gap:18px}
+  .lb-row{display:grid;grid-template-columns:16px 32px minmax(0,1fr);gap:12px;align-items:center}
+  .rank{font-size:12px;color:var(--muted);text-align:center}
+  .lb-top{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:8px}
+  .lb-top b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lb-top span{color:var(--muted);flex:none}
+  .lb-row.you .lb-top b{color:var(--mustard)}
+  .lb-row .bar>div{background:var(--c)}
+  .empty{color:var(--muted);font-size:13px}
+
+  /* auth */
+  .auth{min-height:calc(100vh - 48px);display:grid;place-items:center}
+  .auth .box{width:min(380px,100%)}
+  .auth .logo{justify-content:center;font-size:26px;margin-bottom:6px}
+  .auth .tag{text-align:center;color:var(--muted);font-size:13px;margin-bottom:26px}
+  .auth form{display:grid;gap:10px;margin-top:18px}
+  .auth .tabs{justify-content:center}
+  input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:12px 14px;border-radius:10px;font-size:14px}
+  input:focus,select:focus{outline:none;border-color:var(--purple)}
+  .msg{font-size:13px;min-height:18px;text-align:center;color:var(--muted)}
+  .msg.err{color:#f87171}
+  .msg.ok{color:var(--mustard)}
+
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:24px;width:min(360px,92vw);margin:auto}
+  dialog::backdrop{background:rgba(0,0,0,.8)}
+  dialog h3{font-weight:600;margin-bottom:6px}
+  .sum{color:var(--muted);font-size:13px}
+  select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:10px;font-size:14px}
+  .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:22px}
+  .actions .btn{padding:9px 16px;font-size:13px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,40px);opacity:0;background:var(--mustard);color:#000;padding:10px 18px;border-radius:99px;font-weight:600;font-size:13px;transition:.3s;pointer-events:none;z-index:9}
+  .toast.show{transform:translate(-50%,0);opacity:1}
+
+  @media (max-width:960px){
+    .layout{grid-template-columns:1fr}
+    .board{position:static}
+    .row2{grid-template-columns:1fr}
+  }
+  @media (max-width:640px){
+    body{padding:16px}
+    .top{grid-template-columns:1fr}
+    .sw{border-left:0;border-top:1px solid var(--line);padding:20px 0 0}
+    .sw .time{font-size:48px}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN / SIGN UP -->
+<div class="auth" id="authView" hidden>
+  <div class="box">
+    <div class="logo"><i></i> BeBop</div>
+    <div class="tag">Study together. Stay consistent.</div>
+    <div class="card">
+      <div class="tabs" id="authTabs">
+        <button class="on" data-m="login" type="button">Log in</button>
+        <button data-m="signup" type="button">Sign up</button>
+      </div>
+      <form id="authForm">
+        <input id="aUser" placeholder="Username" minlength="2" maxlength="20" autocomplete="username" hidden>
+        <input id="aEmail" type="email" placeholder="Email" required autocomplete="email">
+        <input id="aPass" type="password" placeholder="Password (min 6 characters)" minlength="6" required autocomplete="current-password">
+        <button class="btn" id="aGo" type="submit">Log in</button>
+        <div class="msg" id="aMsg"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="wrap" id="app" hidden>
+  <header>
+    <div class="logo"><i></i> BeBop</div>
+    <div class="me">
+      <div class="who" id="me"></div>
+      <button class="linkbtn" id="logout">Log out</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="left">
+      <section class="card top">
+        <div class="hello">
+          <h1 id="hello"></h1>
+          <p id="sub"></p>
+          <div class="goal">
+            <div class="row"><span>Today's goal</span><span id="goalTxt"></span></div>
+            <div class="bar"><div id="goalBar" style="width:0"></div></div>
+          </div>
+        </div>
+        <div class="sw" id="sw">
+          <div class="state" id="swState"></div>
+          <div class="time" id="swTime">00:00:00</div>
+          <div class="brk" id="swBrk"></div>
+          <select id="swSubj" aria-label="Subject"></select>
+          <div class="ctrl" id="ctrl"></div>
+        </div>
+      </section>
+
+      <div class="row2">
+        <section class="card streak">
+          <h2>Streak</h2>
+          <div class="big"><span class="num" id="streakNum">0</span></div>
+          <div class="lbl" id="streakLbl">days in a row</div>
+          <div class="dots" id="dots"></div>
+          <div class="best" id="best"></div>
+        </section>
+
+        <section class="card">
+          <h2>Study tracker
+            <div class="tabs" id="heatTabs">
+              <button class="on" data-v="cal">Calendar</button>
+              <button data-v="tod">Time of day</button>
+            </div>
+          </h2>
+          <div id="heatView"></div>
+          <div class="legend">Less <span class="cell"></span><span class="cell l1"></span><span class="cell l2"></span><span class="cell l3"></span><span class="cell l4"></span> More</div>
+        </section>
+      </div>
+    </div>
+
+    <aside class="card board">
+      <h2>Leaderboard
+        <div class="tabs" id="lbTabs">
+          <button class="on" data-v="week">Week</button>
+          <button data-v="all">All time</button>
+        </div>
+      </h2>
+      <div class="lb" id="lb"></div>
+    </aside>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <h3>Finish session</h3>
+  <div class="sum" id="dlgSum"></div>
+  <div class="actions">
+    <button class="btn line" id="dBack">Back</button>
+    <button class="btn line" id="dDiscard">Discard</button>
+    <button class="btn gold" id="dLog">Log session</button>
+  </div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ CONFIG: paste your Supabase values here (see README.md) ============ */
+const SUPABASE_URL = 'https://rswvejdlpyabilftyiis.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_m852ENNXZ7ydD11UQAZZ1w_OCrUyu9O';
+/* ================================================================================== */
+
+const GOAL=120, HIST=365;
+const SUBJECTS=['Maths','Physics','Chemistry','Coding','English','Networking','Other'];
+const PALETTE=['#e1ad01','#b9a1fb','#8b5cf6','#f0cf6b','#9a7bef'];
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const daysAgo=n=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-n);return d};
+const fmt=m=>m>=60?Math.floor(m/60)+'h '+pad(m%60)+'m':m+'m';
+const clock=ms=>{const s=Math.floor(ms/1000);return pad(Math.floor(s/3600))+':'+pad(Math.floor(s/60)%60)+':'+pad(s%60)};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const colorFor=name=>{let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))>>>0;return PALETTE[h%PALETTE.length]};
+const avatar=name=>`<div class="av" style="background:${colorFor(name)}">${esc(name[0]||'?').toUpperCase()}</div>`;
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400)}
+
+const configured=!SUPABASE_URL.startsWith('YOUR_')&&!SUPABASE_KEY.startsWith('YOUR_')&&window.supabase;
+const sb=configured?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+
+let me=null, sessions=[], board=[], heatView='cal', lbView='week';
+
+/* ---------------- auth ---------------- */
+let authMode='login';
+function setAuthMode(m){
+  authMode=m;
+  $('authTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  $('aUser').hidden=m!=='signup'; $('aUser').required=m==='signup';
+  $('aGo').textContent=m==='signup'?'Create account':'Log in';
+  $('aPass').autocomplete=m==='signup'?'new-password':'current-password';
+  setMsg('');
+}
+function setMsg(t,cls){const m=$('aMsg');m.textContent=t;m.className='msg '+(cls||'')}
+$('authTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setAuthMode(b.dataset.m)});
+
+$('authForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!sb){setMsg('Supabase is not configured yet. See README.md.','err');return}
+  const email=$('aEmail').value.trim(), password=$('aPass').value, username=$('aUser').value.trim();
+  $('aGo').disabled=true; setMsg('');
+  try{
+    if(authMode==='signup'){
+      const {data,error}=await sb.auth.signUp({email,password,options:{data:{username}}});
+      if(error) throw error;
+      if(!data.session) setMsg('Check your email to confirm your account, then log in.','ok');
+    } else {
+      const {error}=await sb.auth.signInWithPassword({email,password});
+      if(error) throw error;
+    }
+  }catch(err){ setMsg(err.message||'Something went wrong','err') }
+  $('aGo').disabled=false;
+});
+$('logout').onclick=()=>sb&&sb.auth.signOut();
+
+function showAuth(){
+  $('app').hidden=true; $('authView').hidden=false;
+  if(!configured) setMsg('Add your Supabase URL and key at the top of index.html (see README.md).','err');
+}
+
+if(sb){
+  sb.auth.onAuthStateChange((event,session)=>{
+    const user=session&&session.user;
+    setTimeout(()=>{ user ? enterApp(user) : leaveApp() },0);
+  });
+  sb.auth.getSession().then(({data})=>{ if(!data.session) showAuth() });
+} else showAuth();
+
+async function enterApp(user){
+  if(me&&me.id===user.id) return;
+  const meta=user.user_metadata||{};
+  me={id:user.id,username:meta.username||(user.email||'you').split('@')[0]};
+  sw=loadSW(); $('ctrl').dataset.m='';
+  $('authView').hidden=true; $('app').hidden=false;
+  $('authForm').reset();
+  drawSW(); render();
+  try{
+    const {data}=await sb.from('profiles').select('username').eq('id',user.id).maybeSingle();
+    if(data&&data.username) me.username=data.username;
+  }catch(e){}
+  await refresh();
+}
+function leaveApp(){ me=null; sessions=[]; board=[]; sw=idleSW(); showAuth(); setAuthMode('login') }
+
+/* ---------------- data ---------------- */
+async function loadMine(){
+  const since=key(daysAgo(HIST)); let all=[],from=0;
+  for(;;){
+    const {data,error}=await sb.from('sessions').select('day,minutes,subject,hour').eq('user_id',me.id).gte('day',since).order('day').range(from,from+999);
+    if(error) throw error;
+    all=all.concat(data); if(data.length<1000) break; from+=1000;
+  }
+  return all.map(x=>({d:x.day,m:x.minutes,s:x.subject,h:x.hour}));
+}
+async function loadBoard(){
+  const dow=(new Date().getDay()+6)%7;
+  const {data,error}=await sb.rpc('leaderboard',{from_day:lbView==='week'?key(daysAgo(dow)):null});
+  if(error) throw error;
+  return data.map(r=>({id:r.user_id,name:r.username,m:Number(r.minutes)}));
+}
+async function refresh(){
+  try{
+    [sessions,board]=await Promise.all([loadMine(),loadBoard()]);
+    render();
+  }catch(err){ toast("Couldn't load data. Check your connection.") }
+}
+
+/* ---------------- render ---------------- */
+function byDay(list){const m={};list.forEach(x=>m[x.d]=(m[x.d]||0)+x.m);return m}
+
+function renderWelcome(){
+  const days=byDay(sessions), today=days[key(daysAgo(0))]||0;
+  $('me').innerHTML=avatar(me.username)+`<div><b>${esc(me.username)}</b></div>`;
+  const hr=new Date().getHours();
+  $('hello').textContent=(hr<12?'Good morning':hr<18?'Good afternoon':'Good evening')+', '+me.username;
+  $('sub').textContent=today?`${fmt(today)} logged today.`:'Nothing logged yet today.';
+  $('goalTxt').textContent=`${fmt(today)} / ${fmt(GOAL)}`;
+  $('goalBar').style.width=Math.min(100,today/GOAL*100)+'%';
+}
+
+function renderStreak(){
+  const days=byDay(sessions);
+  let d=0; if(!days[key(daysAgo(0))]) d=1;
+  let cur=0; while(days[key(daysAgo(d))]){cur++;d++}
+  let best=0,run=0;
+  for(let i=HIST-1;i>=0;i--){ if(days[key(daysAgo(i))]){run++;best=Math.max(best,run)} else run=0 }
+  $('streakNum').textContent=cur;
+  $('streakLbl').textContent=cur===1?'day in a row':'days in a row';
+  $('best').textContent=`Best: ${Math.max(best,cur)} days`;
+  const names=['S','M','T','W','T','F','S'];
+  $('dots').innerHTML=[6,5,4,3,2,1,0].map(i=>{
+    const dt=daysAgo(i);
+    return `<div class="dot ${days[key(dt)]?'on':''} ${i===0?'today':''}" title="${key(dt)}"><span></span><b>${names[dt.getDay()]}</b></div>`;
+  }).join('');
+}
+
+const level=m=>!m?0:m<45?1:m<90?2:m<150?3:4;
+
+function renderHeat(){
+  const days=byDay(sessions);
+  if(heatView==='cal'){
+    const WEEKS=20, today=daysAgo(0);
+    const start=daysAgo(today.getDay()+(WEEKS-1)*7);
+    let cells='';
+    for(let c=0;c<WEEKS;c++)for(let r=0;r<7;r++){
+      const dt=new Date(start);dt.setDate(start.getDate()+c*7+r);
+      if(dt>today){cells+='<div class="cell hide"></div>';continue}
+      const m=days[key(dt)]||0;
+      cells+=`<div class="cell l${level(m)}" title="${key(dt)} · ${m?fmt(m):'no study'}"></div>`;
+    }
+    $('heatView').innerHTML=`<div class="heat-scroll"><div class="heatwrap"><div class="ylab"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div><div class="heat">${cells}</div></div></div>`;
+    const sc=document.querySelector('.heat-scroll'); sc.scrollLeft=sc.scrollWidth;
+  } else {
+    const buckets=['12 am','4 am','8 am','12 pm','4 pm','8 pm'], names=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const grid=buckets.map(()=>Array(7).fill(0));
+    sessions.forEach(x=>{
+      const [y,mo,dd]=x.d.split('-').map(Number), dow=(new Date(y,mo-1,dd).getDay()+6)%7;
+      grid[Math.floor(x.h/4)][dow]+=x.m;
+    });
+    const max=Math.max(1,...grid.flat());
+    let h='<div class="tod"><span></span>'+names.map(n=>`<span style="text-align:center">${n}</span>`).join('');
+    grid.forEach((row,i)=>{
+      h+=`<span>${buckets[i]}</span>`+row.map(m=>{
+        const l=!m?0:Math.min(4,Math.ceil(m/max*4));
+        return `<div class="cell l${l}" title="${fmt(m)} total"></div>`;
+      }).join('');
+    });
+    $('heatView').innerHTML=h+'</div>';
+  }
+}
+
+function renderBoard(){
+  if(!board.length){$('lb').innerHTML='<div class="empty">No members yet.</div>';return}
+  const max=Math.max(1,...board.map(b=>b.m));
+  $('lb').innerHTML=board.map((t,i)=>`
+    <div class="lb-row ${t.id===me.id?'you':''}">
+      <div class="rank">${i+1}</div>
+      ${avatar(t.name)}
+      <div>
+        <div class="lb-top"><b>${esc(t.name)}${t.id===me.id?' (you)':''}</b><span>${fmt(t.m)}</span></div>
+        <div class="bar"><div style="width:${t.m/max*100}%;--c:${colorFor(t.name)}"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+function render(){ if(!me) return; renderWelcome();renderStreak();renderHeat();renderBoard() }
+
+function tabs(id,cb){
+  $(id).addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    $(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    cb(b.dataset.v);
+  });
+}
+tabs('heatTabs',v=>{heatView=v;renderHeat()});
+tabs('lbTabs',async v=>{lbView=v;try{board=await loadBoard();renderBoard()}catch(e){toast("Couldn't load leaderboard")}});
+
+/* ---------------- stopwatch ---------------- */
+// mode: idle | run | pause | break. Study time only counts in "run"; break time is tracked separately.
+const idleSW=()=>({mode:'idle',study:0,brk:0,last:0,startH:0,subject:''});
+const SWKEY=()=>'bebop-stopwatch-'+(me?me.id:'x');
+let sw=idleSW();
+function loadSW(){
+  try{const s=JSON.parse(localStorage.getItem(SWKEY())); if(s&&s.mode) return s}catch(e){}
+  return idleSW();
+}
+function saveSW(){ if(!me) return; try{localStorage.setItem(SWKEY(),JSON.stringify(sw))}catch(e){} }
+function advance(){
+  const now=Date.now();
+  if(sw.mode==='run') sw.study+=now-sw.last;
+  else if(sw.mode==='break') sw.brk+=now-sw.last;
+  sw.last=now;
+}
+function setMode(m){
+  advance();
+  if(m==='run'&&sw.mode==='idle') sw={mode:'run',study:0,brk:0,last:Date.now(),startH:new Date().getHours(),subject:$('swSubj').value};
+  else sw.mode=m;
+  sw.last=Date.now();
+  saveSW();drawSW();
+}
+function drawSW(){
+  advance();
+  const labels={idle:'Ready',run:'Studying',pause:'Paused',break:'On break'};
+  $('sw').className='sw '+sw.mode;
+  $('swState').textContent=labels[sw.mode];
+  $('swTime').textContent=clock(sw.study);
+  $('swBrk').textContent=sw.mode==='idle'?'':'Break '+clock(sw.brk);
+  $('swSubj').disabled=sw.mode!=='idle';
+  if(sw.mode!=='idle'&&sw.subject) $('swSubj').value=sw.subject;
+  const b=(id,cls,txt)=>`<button class="btn ${cls}" data-a="${id}">${txt}</button>`;
+  const html={
+    idle:b('start','','Start'),
+    run:b('pause','line','Pause')+b('break','line','Break')+b('finish','gold','Finish'),
+    pause:b('start','','Resume')+b('finish','gold','Finish'),
+    break:b('start','','Resume')+b('finish','gold','Finish')
+  }[sw.mode];
+  if($('ctrl').dataset.m!==sw.mode){$('ctrl').innerHTML=html;$('ctrl').dataset.m=sw.mode}
+  saveSW();
+}
+$('swSubj').innerHTML='<option value="" disabled selected>Choose subject</option>'+SUBJECTS.map(s=>`<option>${s}</option>`).join('');
+$('ctrl').addEventListener('click',e=>{
+  const a=e.target.closest('button')?.dataset.a; if(!a) return;
+  if(a==='start'){
+    if(sw.mode==='idle'&&!$('swSubj').value){toast('Pick a subject first');$('swSubj').focus();return}
+    setMode('run');
+  }
+  else if(a==='pause') setMode('pause');
+  else if(a==='break') setMode('break');
+  else if(a==='finish'){ if(sw.mode==='run'||sw.mode==='break') setMode('pause'); openFinish(); }
+});
+setInterval(()=>{ if(me&&(sw.mode==='run'||sw.mode==='break')){advance();$('swTime').textContent=clock(sw.study);$('swBrk').textContent='Break '+clock(sw.brk);saveSW()} },250);
+
+/* ---------------- finish dialog ---------------- */
+function openFinish(){
+  const mins=Math.round(sw.study/60000);
+  $('dlgSum').textContent=`${sw.subject} · study ${fmt(mins)}`+(sw.brk>=60000?` · break ${fmt(Math.round(sw.brk/60000))} (not counted)`:'');
+  $('dLog').disabled=mins<1;
+  $('dLog').textContent=mins<1?'Under 1 min':'Log session';
+  $('dlg').showModal();
+}
+function resetSW(){ sw=idleSW(); $('ctrl').dataset.m=''; saveSW(); drawSW() }
+$('dBack').onclick=()=>$('dlg').close();
+$('dDiscard').onclick=()=>{ $('dlg').close(); resetSW(); toast('Session discarded') };
+$('dLog').onclick=async()=>{
+  const mins=Math.round(sw.study/60000); if(mins<1) return;
+  const row={day:key(daysAgo(0)),minutes:mins,subject:sw.subject,hour:sw.startH};
+  $('dLog').disabled=true;
+  const {error}=await sb.from('sessions').insert(row);
+  if(error){ $('dLog').disabled=false; toast("Couldn't save. Try again."); return }
+  sessions.push({d:row.day,m:mins,s:row.subject,h:row.hour});
+  $('dlg').close(); resetSW(); render();
+  toast(`Logged ${fmt(mins)} of ${row.subject}`);
+  try{board=await loadBoard();renderBoard()}catch(e){}
+};
+
+setAuthMode('login');
+</script>
+</body>
+</html>
